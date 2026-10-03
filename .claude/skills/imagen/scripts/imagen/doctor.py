@@ -1,4 +1,4 @@
-"""Checking the environment generate and render need: Codex installed and logged in, Chrome launchable, data/ resolving to the creatives folder, and which installed font families CSS can name."""
+"""Checking the environment generate and render need: Codex installed and logged in, Chrome launchable, data/ resolving to a folder, and which installed font families CSS can name."""
 
 from __future__ import annotations
 

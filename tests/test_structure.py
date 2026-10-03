@@ -17,10 +17,18 @@ def test_real_tree_passes():
     assert check_tree(SKILL, ROOT / "tests") == []
 
 
+def _skipped(directory: str, names: list[str]) -> set[str]:
+    """__pycache__ at any depth, and only the top-level data/, which holds real jobs."""
+    skipped = {n for n in names if n == "__pycache__"}
+    if Path(directory) == SKILL and "data" in names:
+        skipped.add("data")
+    return skipped
+
+
 @pytest.fixture
 def broken(tmp_path):
     copy = tmp_path / "imagen"
-    shutil.copytree(SKILL, copy, symlinks=True, ignore=shutil.ignore_patterns("__pycache__"))
+    shutil.copytree(SKILL, copy, symlinks=True, ignore=_skipped)
     return copy
 
 
