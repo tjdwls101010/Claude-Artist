@@ -1,6 +1,6 @@
 """Where a job lives, and how paths are written into its ledger.
 
-A job is a folder holding job.json. A short name lands under the skill's `data/` (the creatives folder it links to); anything that starts with `/`, `~` or `.` is a path used as written. Names are NFC-normalised because APFS hands back NFD while argv carries NFC, and the two spellings of one Korean name compare unequal everywhere they are quoted.
+A job is a folder holding job.json. A short name lands under the skill's `data/` folder; anything that starts with `/`, `~` or `.` is a path used as written. Names are NFC-normalised because APFS hands back NFD while argv carries NFC, and the two spellings of one Korean name compare unequal everywhere they are quoted.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ SKILL_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 def data_root() -> Path:
-    """`IMAGEN_DATA` when set (tests, or a different creatives folder), else the skill's `data/`."""
+    """`IMAGEN_DATA` when set (tests, or a folder elsewhere), else the skill's `data/`."""
     override = os.environ.get("IMAGEN_DATA")
     return Path(override) if override else SKILL_DIR / "data"
 
