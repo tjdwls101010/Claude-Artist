@@ -17,7 +17,7 @@ import re
 import sys
 
 from artist import compose, doctor, generate, inspect, paths, record, sheet
-from artist.errors import Failure
+from artist.errors import Failure, Usage
 
 TOP_EPILOG = """\
 <job> is a short name or a path. A name with no leading /, ~ or . lands under the skill's data/ folder (subfolders allowed, e.g. 기념일/한글날); ./x, ../x, ~/x and /x are paths used as written. Other file arguments are ordinary paths, relative to your cwd or absolute; arguments that name a generated image (--chosen, --final, --base, --from) take its file name as the ledger lists it, e.g. v3-2.png.
@@ -339,6 +339,8 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     try:
         doc, code = run(args, ap)
+    except Usage as exc:
+        ap.error(exc.message)
     except Failure as exc:
         emit(exc.payload())
         return 1

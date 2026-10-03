@@ -13,3 +13,7 @@ class Failure(Exception):
 
     def payload(self) -> dict:
         return {"error": self.message, **self.detail}
+
+
+class Usage(Failure):
+    """Exit 2: the arguments cannot work, found only once the ledger was read (e.g. no aspect given and --like had none)."""
