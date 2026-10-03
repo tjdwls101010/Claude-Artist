@@ -13,8 +13,8 @@ SKILL_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 def data_root() -> Path:
-    """`ARTIST_DATA` when set (tests, or a different creatives folder), else the skill's `data/`."""
-    override = os.environ.get("ARTIST_DATA")
+    """`IMAGEN_DATA` when set (tests, or a different creatives folder), else the skill's `data/`."""
+    override = os.environ.get("IMAGEN_DATA")
     return Path(override) if override else SKILL_DIR / "data"
 
 

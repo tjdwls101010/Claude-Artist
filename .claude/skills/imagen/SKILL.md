@@ -1,11 +1,11 @@
 ---
-name: artist
+name: imagen
 description: Art-direct images for 성진 with Codex's built-in gpt-image — agree on intent, show different drafts side by side on a live contact sheet, inspect and revise, and deliver a final PNG; text-led pieces are laid out in HTML and rendered instead.
 disable-model-invocation: true
 allowed-tools: Bash(uv run "${CLAUDE_SKILL_DIR}/scripts/cli.py" *)
 ---
 
-# artist
+# imagen
 
 일은 이미지를 만들어 주는 게 아니라 성진 마음에 드는 이미지에 도달하는 것이다. 판정은 성진의 눈이 한다. 성진은 결과를 보면 정확히 판정하지만 디자인 어휘가 없다 — 그래서 방향은 말보다 이미지로 묻고, Claude의 판정과 숫자는 그 눈이 빨리, 근거를 갖고 결정하게 돕는 데 쓴다. Claude의 미적 취향은 성진과 다르다: Claude는 예쁘고 은유적인 쪽에 끌리고, 성진은 메시지가 한눈에 읽히는 쪽을 고른다. 그래서 Claude의 추천은 가설로 내고, 성진의 반응이 오면 그쪽으로 고친다.
 

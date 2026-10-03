@@ -15,7 +15,7 @@ import threading
 from pathlib import Path
 from urllib.parse import quote
 
-from artist import ledger, paths
+from imagen import ledger, paths
 
 SHEET = "contact-sheet.html"
 STAMP = ".sheet-stamp.js"
@@ -64,7 +64,7 @@ dialog img { max-width:98vw; max-height:98vh; cursor:zoom-out; display:block; }
 """
 
 JS = """
-const STAMP = "%(stamp)s", KEY = "artist-sheet:" + location.pathname;
+const STAMP = "%(stamp)s", KEY = "imagen-sheet:" + location.pathname;
 const dlg = document.getElementById("zoom");
 document.querySelectorAll("img[data-zoom]").forEach(img => img.addEventListener("click", () => { dlg.querySelector("img").src = img.src; dlg.showModal(); }));
 dlg.addEventListener("click", () => dlg.close());

@@ -7,7 +7,7 @@
 #     "playwright>=1.50",
 # ]
 # ///
-"""artist: make images with Codex's built-in gpt-image, keep every attempt in a job ledger, and show them on a contact sheet."""
+"""imagen: make images with Codex's built-in gpt-image, keep every attempt in a job ledger, and show them on a contact sheet."""
 
 from __future__ import annotations
 
@@ -16,15 +16,15 @@ import json
 import re
 import sys
 
-from artist import compose, doctor, generate, inspect, paths, record, sheet
-from artist.errors import Failure, Usage
+from imagen import compose, doctor, generate, inspect, paths, record, sheet
+from imagen.errors import Failure, Usage
 
 TOP_EPILOG = """\
 <job> is a short name or a path. A name with no leading /, ~ or . lands under the skill's data/ folder (subfolders allowed, e.g. 기념일/한글날); ./x, ../x, ~/x and /x are paths used as written. Other file arguments are ordinary paths, relative to your cwd or absolute; arguments that name a generated image (--chosen, --final, --base, --from) take its file name as the ledger lists it, e.g. v3-2.png.
 
 Every command prints one JSON document on stdout and its progress on stderr. Exit codes: 0 success; 1 the command ran but produced no result (JSON has "error"); 2 bad arguments (JSON has "error" and "help"); 3 doctor found a blocking problem.
 
-Environment: ARTIST_DATA overrides the data/ folder; CODEX_HOME is read the way codex reads it; ARTIST_CHROME_PATH points render at a Chrome binary other than the installed Google Chrome.
+Environment: IMAGEN_DATA overrides the data/ folder; CODEX_HOME is read the way codex reads it; IMAGEN_CHROME_PATH points render at a Chrome binary other than the installed Google Chrome.
 
 Run `<command> --help` for each command's arguments, output and failures."""
 

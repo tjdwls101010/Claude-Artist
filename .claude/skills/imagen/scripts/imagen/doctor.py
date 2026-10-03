@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 
-from artist import chrome, codex, paths
+from imagen import chrome, codex, paths
 
 
 def check(*, fonts: str) -> dict:

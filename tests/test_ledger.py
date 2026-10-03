@@ -13,7 +13,7 @@ import unicodedata
 import pytest
 from PIL import Image
 
-from artist import ledger
+from imagen import ledger
 from conftest import SCRIPTS, make_png
 
 
@@ -253,7 +253,7 @@ def test_an_attempt_finishes_once(sandbox):
 def test_dead_running_attempt_becomes_interrupted(sandbox):
     job = init(sandbox)
     add(sandbox, job)
-    code = f"from pathlib import Path; from artist import ledger; ledger.start_attempt(Path({str(job)!r}), 1)"
+    code = f"from pathlib import Path; from imagen import ledger; ledger.start_attempt(Path({str(job)!r}), 1)"
     subprocess.run([sys.executable, "-c", code], check=True, env={**os.environ, "PYTHONPATH": str(SCRIPTS)})
     assert read(job)["versions"][0]["attempts"][0]["status"] == "running"
     r = sandbox.run("show", job)

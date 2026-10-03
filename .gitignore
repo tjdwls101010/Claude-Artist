@@ -3,7 +3,7 @@ __pycache__/
 *.pyc
 .claude/histories
 .tmp/old-skills/projects
-.claude/skills/artist/data
+.claude/skills/imagen/data
 .tmp/plan-evidence/
 .venv/
 .pytest_cache/

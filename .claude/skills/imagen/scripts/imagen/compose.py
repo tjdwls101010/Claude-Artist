@@ -13,8 +13,8 @@ from urllib.parse import unquote, urlparse
 
 import numpy as np
 
-from artist import chrome, ledger, paths, regions, sheet
-from artist.errors import Failure
+from imagen import chrome, ledger, paths, regions, sheet
+from imagen.errors import Failure
 
 DIFF_SIDE = 128
 CSS_URL = re.compile(r"""url\(\s*(['"]?)(.*?)\1\s*\)""", re.I)

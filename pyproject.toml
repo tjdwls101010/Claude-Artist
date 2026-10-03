@@ -12,5 +12,5 @@ dev = ["pytest>=8", "pillow>=11", "numpy>=2", "fonttools>=4.50", "playwright>=1.
 package = false
 
 [tool.pytest.ini_options]
-pythonpath = [".claude/skills/artist/scripts"]
+pythonpath = [".claude/skills/imagen/scripts"]
 testpaths = ["tests"]

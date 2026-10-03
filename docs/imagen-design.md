@@ -1,6 +1,6 @@
-# artist 스킬 개발 기록
+# imagen 스킬 개발 기록
 
-`.claude/skills/artist`가 왜 이런 모양인지, 무엇을 재서 무엇을 넣고 뺐는지, 다음 모델에서 무엇을 다시 재야 하는지를 남긴다. 스킬 본문(SKILL.md)은 실행하는 모델을 위한 글이라 출처·실측·변론을 담지 않는다 — 그것은 전부 여기 있다. 계획서는 `.claude/plans/261002_artist 스킬 작성.md`, 계획 세션의 원 증거는 `.tmp/plan-evidence/261002/`(로컬, gitignore), R 재검증 이미지와 장부는 `.tmp/plan-evidence/rtable/`(로컬)에 있다.
+`.claude/skills/imagen`가 왜 이런 모양인지, 무엇을 재서 무엇을 넣고 뺐는지, 다음 모델에서 무엇을 다시 재야 하는지를 남긴다. 스킬 본문(SKILL.md)은 실행하는 모델을 위한 글이라 출처·실측·변론을 담지 않는다 — 그것은 전부 여기 있다. 계획서는 `.claude/plans/261002_artist 스킬 작성.md`, 계획 세션의 원 증거는 `.tmp/plan-evidence/261002/`(로컬, gitignore), R 재검증 이미지와 장부는 `.tmp/plan-evidence/rtable/`(로컬)에 있다.
 
 ## 결정
 

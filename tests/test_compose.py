@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from artist import ledger
+from imagen import ledger
 from conftest import FAKES, make_png
 
 
@@ -265,7 +265,7 @@ def test_data_uri_srcset_is_allowed(rjob):
 
 def test_a_chrome_that_will_not_start_closes_the_attempt(rjob):
     html = write_page(rjob.job)
-    r = rjob.run("render", rjob.job, "--html", html, "--size", "300x200", "--direction", "t", env={"ARTIST_CHROME_PATH": "/nonexistent/chrome"})
+    r = rjob.run("render", rjob.job, "--html", html, "--size", "300x200", "--direction", "t", env={"IMAGEN_CHROME_PATH": "/nonexistent/chrome"})
     assert r.code == 1 and r.out and "error" in r.out
     assert read(rjob.job)["versions"][0]["attempts"][0]["status"] == "executor_error"
 
@@ -301,7 +301,7 @@ def test_doctor_ok(doc):
     assert "Apple SD Gothic Neo" in families and "Helvetica" not in families
 
 
-@pytest.mark.parametrize("env, word", [({"PATH": "/usr/bin:/bin"}, "codex"), ({"FAKE_CODEX_SCENARIO": "logged_out"}, "logged in"), ({"ARTIST_CHROME_PATH": "/nonexistent/chrome"}, "Chrome"), ({"ARTIST_DATA": "/nonexistent/data"}, "data")])
+@pytest.mark.parametrize("env, word", [({"PATH": "/usr/bin:/bin"}, "codex"), ({"FAKE_CODEX_SCENARIO": "logged_out"}, "logged in"), ({"IMAGEN_CHROME_PATH": "/nonexistent/chrome"}, "Chrome"), ({"IMAGEN_DATA": "/nonexistent/data"}, "data")])
 def test_doctor_blocking_problems_exit_3(doc, env, word):
     r = doc.run("doctor", env=env, timeout=300)
     assert r.code == 3, r.raw

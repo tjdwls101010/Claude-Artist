@@ -6,8 +6,8 @@ import os
 import uuid
 from pathlib import Path
 
-from artist import ledger, paths, regions, sheet
-from artist.errors import Failure, Usage
+from imagen import ledger, paths, regions, sheet
+from imagen.errors import Failure, Usage
 
 ASPECT_TOLERANCE = 0.01
 

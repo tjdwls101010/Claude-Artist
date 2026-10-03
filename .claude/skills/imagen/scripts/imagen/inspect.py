@@ -10,8 +10,8 @@ from pathlib import Path
 
 import numpy as np
 
-from artist import ledger, regions, sheet
-from artist.errors import Failure
+from imagen import ledger, regions, sheet
+from imagen.errors import Failure
 
 SHORT_SIDE = 900
 BLUR_SIGMA = 1.0

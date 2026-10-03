@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from artist.errors import Failure
+from imagen.errors import Failure
 
 from .legacy import inherit
 from .schema import SCHEMA, ok_files, validate

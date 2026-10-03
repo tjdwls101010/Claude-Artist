@@ -12,7 +12,7 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 
-from artist.errors import Failure
+from imagen.errors import Failure
 
 from .schema import SCHEMA, validate
 
