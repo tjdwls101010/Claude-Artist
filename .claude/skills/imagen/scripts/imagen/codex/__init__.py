@@ -1,6 +1,6 @@
 """The Codex CLI as an image generator: one `codex exec` per image through its built-in image_gen tool.
 
-What this unit hands back is a `Run` in the skill's terms: the image file if one was made and whether it came from this run's thread folder, what Codex reports it passed as the prompt, and, when there is no image, whether moderation blocked it and at which stage. Codex's event shapes, file layout and error encoding stay inside.
+What this unit hands back is a `Run` in the skill's terms: the image file if one was made and whether it came from this run's thread folder, what Codex reports it passed as the prompt, and, when there is no image, whether moderation blocked it and at which stage. Codex's event shapes, file layout and error encoding stay inside. `prompt_warnings` checks, before generating, what image_gen needs from a prompt.
 
 image_gen takes a prompt, optional referenced_image_paths and an optional transparent_background, and nothing else: no size, quality, mask, seed or output path. Its tool call does not appear in the event stream, so `prompt_passed` is Codex's own report, not an observation.
 """
@@ -17,8 +17,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import envelope, rollout
+from .prompt import warnings as prompt_warnings
 
-__all__ = ["Run", "run", "executable", "version", "login_status", "home"]
+__all__ = ["Run", "run", "executable", "version", "login_status", "home", "prompt_warnings"]
 
 
 @dataclass

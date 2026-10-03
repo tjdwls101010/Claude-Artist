@@ -6,7 +6,7 @@ import os
 import uuid
 from pathlib import Path
 
-from imagen import ledger, paths, regions, sheet
+from imagen import codex, ledger, paths, regions, sheet
 from imagen.errors import Failure, Usage
 
 ASPECT_TOLERANCE = 0.01
@@ -65,7 +65,11 @@ def add(job_dir: Path, *, prompt: str, direction: str, method: str, refs: list[P
             fields["change"] = change
         entry = ledger.add_version(job, fields)
     sheet.rebuild(job_dir)
-    return {"version": entry["v"]}
+    out = {"version": entry["v"]}
+    warnings = codex.prompt_warnings(prompt, fields["aspect"])
+    if warnings:
+        out["warnings"] = warnings
+    return out
 
 
 def _ok_attempt(job: dict, name: str, what: str) -> tuple[dict, dict]:
