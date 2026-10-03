@@ -254,6 +254,10 @@ def test_data_uri_srcset_is_allowed(rjob):
     (rjob.job / "d.html").write_text(f'<!doctype html><meta charset="utf-8"><img srcset="{uri} 1x, assets/photo.png 2x">')
     r = rjob.run("render", rjob.job, "--html", rjob.job / "d.html", "--size", "300x200", "--direction", "t")
     assert r.code == 0, r.raw
+    make_png(rjob.job / "assets" / "cover\u00a0wide.png", (4, 4))  # a no-break space is part of the URL, not a separator
+    (rjob.job / "n.html").write_text('<!doctype html><meta charset="utf-8"><img srcset="assets/cover\u00a0wide.png 1x, assets/photo.png 2x">')
+    r = rjob.run("render", rjob.job, "--html", rjob.job / "n.html", "--size", "300x200", "--direction", "t")
+    assert r.code == 0, r.raw
     (rjob.job / "e.html").write_text('<!doctype html><meta charset="utf-8"><img srcset="assets/photo.png, assets/nope.png">')
     r = rjob.run("render", rjob.job, "--html", rjob.job / "e.html", "--size", "300x200", "--direction", "t")
     assert r.code == 1 and any("nope.png" in m for m in r.out["missing_assets"])

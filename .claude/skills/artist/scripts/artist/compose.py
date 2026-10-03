@@ -19,6 +19,7 @@ from artist.errors import Failure
 DIFF_SIDE = 128
 CSS_URL = re.compile(r"""url\(\s*(['"]?)(.*?)\1\s*\)""", re.I)
 DOCUMENTS = {".html", ".htm", ".svg"}
+ASCII_SPACE = " \t\n\r\f"  # HTML separates srcset candidates on ASCII whitespace only
 CSS_IMPORT = re.compile(r"""@import\s+(?:url\(\s*)?(['"])(.*?)\1""", re.I)
 
 
@@ -132,10 +133,10 @@ def _srcset_urls(value: str) -> list[str]:
     """URLs of a srcset, tokenised the way the HTML spec does: a URL runs to whitespace (so data: URLs keep their commas), trailing commas end a candidate with no descriptor, otherwise descriptors run to the next comma outside parentheses."""
     urls, i, n = [], 0, len(value)
     while i < n:
-        while i < n and (value[i].isspace() or value[i] == ","):
+        while i < n and (value[i] in ASCII_SPACE or value[i] == ","):
             i += 1
         start = i
-        while i < n and not value[i].isspace():
+        while i < n and value[i] not in ASCII_SPACE:
             i += 1
         url = value[start:i]
         if url.endswith(","):
