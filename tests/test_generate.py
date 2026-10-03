@@ -85,6 +85,7 @@ def test_eight_requests_run_at_most_six_at_once(gen):
         peak = max(peak, live)
     assert peak == 6
     assert "8 requested" in r.out["summary"] and "8 ok" in r.out["summary"]
+    assert "생성 중" not in (gen.job / "contact-sheet.html").read_text()
 
 
 def test_aspect_miss_is_reported_not_failed(gen):
@@ -166,12 +167,13 @@ def test_image_outside_the_thread_folder_is_kept_but_not_choosable(gen):
     assert r.out["results"][0]["status"] == "path_mismatch" and (gen.job / "v1-1.png").exists()
 
 
-def test_timeout_kills_the_process_group_and_closes_the_row(gen):
+@pytest.mark.parametrize("scenario", ["hang", "hang_stubborn"])
+def test_timeout_kills_the_process_group_and_closes_the_row(gen, scenario):
     add(gen)
     started = time.time()
-    r = generate(gen, "--version", "1", "--timeout", "2", scenario="hang")
+    r = generate(gen, "--version", "1", "--timeout", "2", scenario=scenario)
     assert time.time() - started < 30
-    assert r.code == 1 and r.out["results"][0]["status"] == "timeout"
+    assert r.code == 1 and r.out["results"][0]["status"] == "timeout" and "error" in r.out
     assert ledger_rows(gen)[0]["status"] == "timeout"
     child = int((gen.codex_home / "child.pid").read_text())
     time.sleep(0.5)

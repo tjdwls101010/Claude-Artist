@@ -85,6 +85,8 @@ def _export(job_dir: Path, final: str, dest: Path, crop, size, fmt: str | None) 
         raise Failure(f"--format {fmt} disagrees with the export file's extension {suffix}")
     if dest.exists():
         raise Failure(f"{dest} already exists; exports never overwrite")
+    if not (job_dir / final).is_file():
+        raise Failure(f"{final} is in the ledger but its file is missing from {job_dir}")
     with Image.open(job_dir / final) as im:
         im.load()
         image = im

@@ -2,7 +2,7 @@
 
 It accepts only the argv the skill is supposed to send, reads the envelope from stdin, and writes what the real CLI writes: JSON events on stdout, the last message to the -o file, the image under $CODEX_HOME/generated_images/<thread id>/, and a rollout under $CODEX_HOME/sessions/YYYY/MM/DD/. Every exec appends start/end records to $CODEX_HOME/fake-calls.jsonl so tests can see concurrency and what was passed.
 
-Scenarios: ok normalized unverified rewrite_ok rewrite_twice refuse_output refuse_input refuse_unknown refuse_multi exit_nonzero bad_json path_fallback path_outside hang logged_out.
+Scenarios: ok normalized unverified rewrite_ok rewrite_twice refuse_output refuse_input refuse_unknown refuse_multi exit_nonzero bad_json path_fallback path_outside hang hang_stubborn logged_out.
 """
 
 from __future__ import annotations
@@ -106,8 +106,9 @@ def main() -> int:
     if SCENARIO == "exit_nonzero":
         print("fatal: something broke", file=sys.stderr)
         return 1
-    if SCENARIO == "hang":
-        child = subprocess.Popen(["sleep", "600"])
+    if SCENARIO in ("hang", "hang_stubborn"):
+        # hang_stubborn: the child ignores SIGTERM while this parent dies of it, so only SIGKILL to the group stops it.
+        child = subprocess.Popen(["sh", "-c", "trap '' TERM; while :; do sleep 1; done"] if SCENARIO == "hang_stubborn" else ["sleep", "600"])
         (HOME / "child.pid").write_text(str(child.pid))
         time.sleep(600)
         return 0

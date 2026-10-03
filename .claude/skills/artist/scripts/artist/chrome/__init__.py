@@ -63,9 +63,10 @@ def render(html: Path, out: Path, *, size: tuple[int, int], scale: int, root: Pa
             report[kind].append(text)
 
     with _browser() as browser:
-        context = browser.new_context(viewport={"width": size[0], "height": size[1]}, device_scale_factor=scale)
+        # Context-level routing also covers popups and workers; offline stops anything that slips past it from reaching the network.
+        context = browser.new_context(viewport={"width": size[0], "height": size[1]}, device_scale_factor=scale, offline=True)
+        context.route("**/*", route)
         page = context.new_page()
-        page.route("**/*", route)
         page.on("requestfailed", lambda req: note("failed_requests", f"{unquote(req.url)} ({req.failure})") if req.url not in report["refused_requests"] else None)
         page.on("console", lambda msg: note("console_errors", msg.text) if msg.type == "error" else None)
         page.on("pageerror", lambda err: note("console_errors", str(err)))

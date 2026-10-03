@@ -14,8 +14,8 @@ MARK_TEXT_ELEMENTS = """
 () => {
   const out = [];
   let n = 0;
-  for (const el of document.body ? document.body.querySelectorAll('*') : []) {
-    if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE'].includes(el.tagName)) continue;
+  for (const el of document.body ? [document.body, ...document.body.querySelectorAll('*')] : []) {
+    if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'ARTIST-PROBE', 'ARTIST-PROBE-BOX'].includes(el.tagName)) continue;
     const text = [...el.childNodes].filter(c => c.nodeType === 3).map(c => c.textContent).join('').trim();
     if (!text) continue;
     const cs = getComputedStyle(el);
@@ -29,21 +29,23 @@ MARK_TEXT_ELEMENTS = """
 }
 """
 
+# Probes use a tag no page stylesheet targets and reset every inherited property, so page CSS cannot hide or restyle them.
 ADD_PROBES = """
 ([items, sentinels]) => {
-  const box = document.createElement('div');
-  box.style.cssText = 'position:absolute; left:-10000px; top:0; white-space:pre;';
+  const box = document.createElement('artist-probe-box');
+  box.style.cssText = 'all: initial; position: absolute; left: -10000px; top: 0; display: block; white-space: pre;';
   for (const it of items) {
     sentinels.forEach((s, i) => {
-      const span = document.createElement('span');
+      const span = document.createElement('artist-probe');
       span.setAttribute('data-artist-probe', it.id + '-' + i);
+      span.style.cssText = 'all: initial; display: inline; white-space: pre;';
       span.style.fontFamily = it.first + ', "' + s + '"';
       span.style.fontWeight = it.weight; span.style.fontStyle = it.style; span.style.fontStretch = it.stretch;
       span.textContent = it.text_full;
       box.appendChild(span);
     });
   }
-  document.body.appendChild(box);
+  (document.body || document.documentElement).appendChild(box);
 }
 """
 

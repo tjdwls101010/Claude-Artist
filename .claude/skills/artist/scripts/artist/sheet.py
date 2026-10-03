@@ -5,6 +5,7 @@ The layout is fixed so every job reads the same way: targets pinned at the top, 
 
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import html
 import os
@@ -235,11 +236,14 @@ def _atomic(path: Path, text: str) -> None:
 
 
 def rebuild(job_dir: Path, open_it: bool = False) -> Path:
-    job = ledger.read(job_dir)
-    stamp = hashlib.sha1(render(job, job_dir, "").encode()).hexdigest()[:12]
     out = job_dir / SHEET
-    _atomic(out, render(job, job_dir, stamp))
-    _atomic(job_dir / STAMP, f'window.__sheetStamp = "{stamp}";\n')
+    # Reading the ledger and publishing the page happen under one lock, so a rebuild that read an older ledger can never land after a newer one.
+    with open(job_dir / ".sheet.lock", "a+") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        job = ledger.read(job_dir)
+        stamp = hashlib.sha1(render(job, job_dir, "").encode()).hexdigest()[:12]
+        _atomic(out, render(job, job_dir, stamp))
+        _atomic(job_dir / STAMP, f'window.__sheetStamp = "{stamp}";\n')
     if open_it:
         _open(out)
     return out

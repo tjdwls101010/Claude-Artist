@@ -202,3 +202,17 @@ def test_srgb_to_lab(rgb, lab):
 ])
 def test_ciede2000_against_sharma(lab1, lab2, expected):
     assert inspect.delta_e2000(np.array(lab1), np.array(lab2)) == pytest.approx(expected, abs=1e-4)
+
+
+def test_hidden_colour_of_transparent_pixels_changes_nothing(sandbox):
+    # Opaque white on every fourth row, transparent elsewhere; only the invisible RGB differs between the two files.
+    results = []
+    for hidden in (255, 0):
+        arr = np.zeros((900, 900, 4), np.uint8)
+        arr[..., :3] = hidden
+        arr[::4, :, :] = (255, 255, 255, 255)
+        path = sandbox.root / f"h{hidden}.png"
+        Image.fromarray(arr).save(path)
+        results.append(measure(sandbox, path, "--axis", "zones")[0]["values"])
+    assert results[0]["ground_L"] == results[1]["ground_L"] == pytest.approx(100.0, abs=0.5)
+    assert results[0]["bands"] == results[1]["bands"] == {"0-25": 0.0, "25-50": 0.0, "50-75": 0.0, "75-100": 0.0}

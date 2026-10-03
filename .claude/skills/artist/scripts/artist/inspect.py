@@ -130,7 +130,9 @@ def _blur(channel: np.ndarray, sigma: float) -> np.ndarray:
 
 def _ground_and_ink(lab: np.ndarray, mask: np.ndarray) -> tuple[float, np.ndarray, bool]:
     L = lab[..., 0]
-    blurred = _blur(L, BLUR_SIGMA)
+    # Normalised convolution: transparent pixels carry hidden colour that must not leak into their visible neighbours.
+    weight = mask.astype(float)
+    blurred = _blur(L * weight, BLUR_SIGMA) / np.maximum(_blur(weight, BLUR_SIGMA), 1e-9)
     counted = blurred[mask]
     if counted.size == 0:
         raise Failure("every pixel is transparent; nothing to measure")

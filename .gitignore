@@ -7,3 +7,4 @@ __pycache__/
 .tmp/plan-evidence/
 .venv/
 .pytest_cache/
+.codex-runs/

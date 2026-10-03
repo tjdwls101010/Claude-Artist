@@ -210,4 +210,7 @@ def run(job_dir: Path, *, versions: list[int], n: int, timeout: int) -> dict:
     misses = [r["file"] for r in results if r.get("aspect_ok") is False]
     if misses:
         summary += f" · aspect missed: {', '.join(misses)}"
-    return {"summary": summary, "results": results, "sheet": str(sheet_path)}
+    out = {"summary": summary, "results": results, "sheet": str(sheet_path)}
+    if not counts.get("ok"):
+        out["error"] = "no image succeeded; each result's status and the stderr lines say why"
+    return out

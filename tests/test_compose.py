@@ -74,6 +74,25 @@ def test_patch_hard_edge_and_outside_diff(job):
     assert (out[:50, :40] == 120).all() and (out[50:, :] == 100).all() and (out[:, 40:] == 100).all()
 
 
+def test_patch_keeps_palette_transparency_outside_the_region(job):
+    job.run("add", job.job, "--direction", "d", "--method", "generate", stdin="x")
+    job.run("add", job.job, "--direction", "e", "--method", "generate", stdin="y")
+    names = []
+    for v, index in ((1, 0), (2, 1)):
+        row = ledger.start_attempt(job.job, v)
+        im = Image.new("P", (60, 60), index)
+        im.putpalette([255, 0, 0, 0, 0, 255] + [0] * 762)
+        im.info["transparency"] = 0
+        im.save(job.job / (row["id"] + ".png"), transparency=0)
+        ledger.finish_attempt(job.job, v, row["id"], {"status": "ok", "file": row["id"] + ".png", "w": 60, "h": 60})
+        names.append(row["id"] + ".png")
+    r = job.run("patch", job.job, "--base", names[0], "--from", names[1], "--region", "0,0,50,50")
+    assert r.code == 0, r.raw
+    out = np.asarray(Image.open(job.job / r.out["file"]).convert("RGBA"))
+    base = np.asarray(Image.open(job.job / names[0]).convert("RGBA"))
+    assert np.array_equal(out[30:, :], base[30:, :]) and out[50, 50, 3] == 0
+
+
 def test_patch_refusals(job):
     b, f = two_versions(job, np.zeros((100, 80, 3), np.uint8), np.zeros((90, 80, 3), np.uint8))
     r = job.run("patch", job.job, "--base", b, "--from", f, "--region", "0,0,50,50")
@@ -183,6 +202,64 @@ def test_missing_remote_and_outside_assets_stop_before_a_version(rjob):
     stray.write_text("<p>x</p>")
     assert rjob.run("render", rjob.job, "--html", stray, "--size", "300x200", "--direction", "t").code == 1
     assert read(rjob.job)["versions"] == []
+
+
+def test_scripts_cannot_reach_the_network(rjob):
+    html = write_page(rjob.job)
+    html.write_text(html.read_text().replace("</body>", "<script>fetch('https://example.com/f').catch(() => {}); window.open('https://example.org/p');</script></body>"))
+    r = rjob.run("render", rjob.job, "--html", html, "--size", "300x200", "--direction", "t")
+    assert r.code == 1
+    refused = " ".join(r.out["refused_assets"])
+    assert "example.com/f" in refused and "example.org/p" in refused
+
+
+def test_absolute_paths_are_refused_even_inside_the_job(rjob):
+    html = write_page(rjob.job, extra=f".x {{ background:url('{rjob.job / 'assets' / 'photo.png'}'); }}")
+    r = rjob.run("render", rjob.job, "--html", html, "--size", "300x200", "--direction", "t")
+    assert r.code == 1 and any("relative" in x for x in r.out["refused_assets"])
+
+
+def test_assets_of_embedded_documents_are_snapshotted(rjob):
+    make_png(rjob.job / "assets" / "inner.png", (20, 20), (0, 0, 255))
+    (rjob.job / "inner.html").write_text('<!doctype html><meta charset="utf-8"><body style="margin:0"><img src="assets/inner.png"></body>')
+    html = write_page(rjob.job)
+    html.write_text(html.read_text().replace("</body>", '<iframe src="inner.html" style="position:absolute; left:0; top:150px; width:60px; height:50px; border:0"></iframe></body>'))
+    r = rjob.run("render", rjob.job, "--html", html, "--size", "300x200", "--scale", "1", "--direction", "t")
+    assert r.code == 0, r.raw
+    assert (rjob.job / "renders" / "v1" / "assets" / "inner.png").exists()
+    (rjob.job / "inner.html").write_text('<img src="assets/nope.png">')
+    r = rjob.run("render", rjob.job, "--html", html, "--size", "300x200", "--direction", "t")
+    assert r.code == 1 and any("nope.png" in m for m in r.out["missing_assets"])
+
+
+def test_body_text_is_font_checked(rjob):
+    (rjob.job / "b.html").write_text('<!doctype html><meta charset="utf-8"><body style="font-family:NoSuchFamily">한글날</body>')
+    r = rjob.run("render", rjob.job, "--html", rjob.job / "b.html", "--size", "300x200", "--direction", "t")
+    assert r.code == 1 and r.out["font_problems"][0]["intended"] == "NoSuchFamily"
+
+
+def test_page_css_does_not_break_the_font_check(rjob):
+    (rjob.job / "c.html").write_text('<!doctype html><meta charset="utf-8"><style>span, div { display:none !important; }</style><p style="font-family:Helvetica">Hello</p>')
+    r = rjob.run("render", rjob.job, "--html", rjob.job / "c.html", "--size", "300x200", "--direction", "t")
+    assert r.code == 0, r.raw
+
+
+def test_data_uri_srcset_is_allowed(rjob):
+    import base64
+    import io
+    buf = io.BytesIO()
+    Image.new("RGB", (4, 4), (0, 0, 255)).save(buf, "PNG")
+    uri = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+    (rjob.job / "d.html").write_text(f'<!doctype html><meta charset="utf-8"><img srcset="{uri} 1x, assets/photo.png 2x">')
+    r = rjob.run("render", rjob.job, "--html", rjob.job / "d.html", "--size", "300x200", "--direction", "t")
+    assert r.code == 0, r.raw
+
+
+def test_a_chrome_that_will_not_start_closes_the_attempt(rjob):
+    html = write_page(rjob.job)
+    r = rjob.run("render", rjob.job, "--html", html, "--size", "300x200", "--direction", "t", env={"ARTIST_CHROME_PATH": "/nonexistent/chrome"})
+    assert r.code == 1 and r.out and "error" in r.out
+    assert read(rjob.job)["versions"][0]["attempts"][0]["status"] == "executor_error"
 
 
 def test_page_errors_fail_the_render(rjob):

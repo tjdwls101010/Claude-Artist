@@ -18,6 +18,8 @@ from artist.errors import Failure
 
 DIFF_SIDE = 128
 CSS_URL = re.compile(r"""url\(\s*(['"]?)(.*?)\1\s*\)""", re.I)
+SRCSET = re.compile(r"\s*(\S+)(?:\s+[^,\s]+)?\s*(?:,|$)")
+DOCUMENTS = {".html", ".htm", ".svg"}
 CSS_IMPORT = re.compile(r"""@import\s+(?:url\(\s*)?(['"])(.*?)\1""", re.I)
 
 
@@ -50,10 +52,13 @@ def patch(job_dir: Path, *, base: str, source: str, region, feather: int, direct
     job = ledger.read(job_dir)
     base_entry, base_row = _ok_file(job, base, "--base")
     _, from_row = _ok_file(job, source, "--from")
+    for r in (base_row, from_row):
+        if not (job_dir / r["file"]).is_file():
+            raise Failure(f"{r['file']} is in the ledger but its file is missing from {job_dir}")
     with Image.open(job_dir / base_row["file"]) as b, Image.open(job_dir / from_row["file"]) as f:
         if b.size != f.size:
             raise Failure(f"--base is {b.size[0]}x{b.size[1]} but --from is {f.size[0]}x{f.size[1]}; a patch needs two images of the same size")
-        mode = "RGBA" if "A" in b.getbands() else "RGB"
+        mode = "RGBA" if "A" in b.getbands() or b.has_transparency_data else "RGB"
         base_arr = np.asarray(b.convert(mode))
         from_arr = np.asarray(f.convert(mode))
         small = (DIFF_SIDE, max(1, round(DIFF_SIDE * b.height / b.width))) if b.width >= b.height else (max(1, round(DIFF_SIDE * b.width / b.height)), DIFF_SIDE)
@@ -76,7 +81,11 @@ def patch(job_dir: Path, *, base: str, source: str, region, feather: int, direct
         entry = ledger.add_version(doc, {"direction": direction or base_entry["direction"], "method": "patch", "parent": base_entry["v"], "inputs": {"base": base_row["file"], "from": from_row["file"], "region_px": list(box), "feather": feather}})
         row = dict(ledger.new_attempt(entry))
     name = row["id"] + ".png"
-    Image.fromarray(blended).save(job_dir / name)
+    try:
+        Image.fromarray(blended).save(job_dir / name)
+    except Exception as exc:  # noqa: BLE001 -- the attempt must close with the reason, never stay running
+        ledger.finish_attempt(job_dir, entry["v"], row["id"], {"status": "executor_error", "detail": {"message": f"{type(exc).__name__}: {exc}"[:300]}})
+        raise Failure(f"could not write the patched image: {exc}") from exc
     ledger.finish_attempt(job_dir, entry["v"], row["id"], {"status": "ok", "file": name, "w": w, "h": h})
     sheet.rebuild(job_dir)
     return {"version": entry["v"], "file": name, "outside_diff": outside_diff}
@@ -101,7 +110,8 @@ class _Refs(HTMLParser):
             if key in a:
                 self.urls.append(a[key])
         if "srcset" in a:
-            self.urls += [part.strip().split()[0] for part in a["srcset"].split(",") if part.strip()]
+            # A candidate is a URL without spaces, an optional descriptor, then a comma; data: URLs contain commas of their own.
+            self.urls += [m.group(1).rstrip(",") for m in SRCSET.finditer(a["srcset"])]
         if tag == "link" and "href" in a and a.get("rel", "").lower() in ("stylesheet", "preload", "icon", "prefetch"):
             self.urls.append(a["href"])
         if tag in ("image", "use", "feimage"):
@@ -129,11 +139,14 @@ def _collect(html: Path, job_dir: Path) -> tuple[set[Path], list[str], list[str]
     files, refused, missing = {html}, [], []
     queue: list[tuple[str, Path, bool]] = []  # (url, document dir, is css)
 
-    parser = _Refs()
-    parser.feed(html.read_text(encoding="utf-8", errors="replace"))
-    queue += [(u, html.parent, False) for u in parser.urls]
-    for css in parser.css:
-        queue += [(u, html.parent, False) for u in _css_urls(css)]
+    def document(path: Path) -> None:
+        parser = _Refs()
+        parser.feed(path.read_text(encoding="utf-8", errors="replace"))
+        queue.extend((u, path.parent, False) for u in parser.urls)
+        for css in parser.css:
+            queue.extend((u, path.parent, False) for u in _css_urls(css))
+
+    document(html)
     root = job_dir.resolve()
     seen = set()
     while queue:
@@ -147,16 +160,23 @@ def _collect(html: Path, job_dir: Path) -> tuple[set[Path], list[str], list[str]
             refused.append(f"{url} (remote; copy the file into the job folder)")
             continue
         raw = unquote(parsed.path)
-        target = (Path(raw) if Path(raw).is_absolute() else base / raw).resolve()
+        if parsed.scheme == "file" or Path(raw).is_absolute():
+            refused.append(f"{url} (absolute path; use a path relative to the file that references it, so the snapshot can stand alone)")
+            continue
+        target = (base / raw).resolve()
         if target != root and root not in target.parents:
             refused.append(f"{url} (outside the job folder; copy it in first)")
             continue
         if not target.is_file():
             missing.append(f"{url} -> {target}")
             continue
+        if target in files:
+            continue
         files.add(target)
         if target.suffix.lower() == ".css":
             queue += [(u, target.parent, True) for u in _css_urls(target.read_text(encoding="utf-8", errors="replace"))]
+        elif target.suffix.lower() in DOCUMENTS:
+            document(target)
     return files, refused, missing
 
 
@@ -183,14 +203,20 @@ def render(job_dir: Path, *, html: Path, size: tuple[int, int], scale: int, dire
         row = dict(ledger.new_attempt(entry))
 
     snap_root = job_dir / "renders" / f"v{v}"
-    for f in files:
-        dest = snap_root / f.relative_to(root)
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(f, dest)
-    sheet.ensure_opened(job_dir)
     name = row["id"] + ".png"
     out = job_dir / name
-    report = chrome.render(job_dir / snapshot_html, out, size=size, scale=scale, root=snap_root)
+    try:
+        for f in files:
+            dest = snap_root / f.relative_to(root)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(f, dest)
+        sheet.ensure_opened(job_dir)
+        report = chrome.render(job_dir / snapshot_html, out, size=size, scale=scale, root=snap_root)
+    except Exception as exc:  # noqa: BLE001 -- the attempt must close with the reason, never stay running
+        message = f"{type(exc).__name__}: {' '.join(str(exc).split())[:300]}"
+        ledger.finish_attempt(job_dir, v, row["id"], {"status": "executor_error", "detail": {"code": "render_failed", "message": message}})
+        sheet.rebuild(job_dir)
+        raise Failure(f"render of v{v} failed: {message}", version=v) from exc
     problems = {
         "missing_assets": report["failed_requests"],
         "refused_assets": report["refused_requests"],

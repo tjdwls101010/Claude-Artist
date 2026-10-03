@@ -251,9 +251,9 @@ failures: exit 1 if --base or --from is not an ok attempt of this job or the two
     p = command("render", "Render an HTML layout you wrote into a PNG, as a new version.", """\
 output: {"version": N, "file": "v{N}-1.png", "px": [W*scale, H*scale]}
 
-The HTML must sit inside the job folder, and so must every file it references through src, stylesheet href, srcset, or url() in inline or linked CSS; data: URIs are fine. Remote URLs and paths outside the job are refused: copy the file into the job first, and use installed fonts by family name (doctor lists them). Before rendering, the HTML and everything it references are copied to renders/v{N}/ keeping their paths relative to the job folder, and the render reads that snapshot, so the version can be reproduced without the originals. --size is the CSS viewport; the PNG is size x scale pixels. Rendering waits for document.fonts.ready and every image to decode (30 s limit) in a fresh browser, so an edited file always renders anew.
+The HTML must sit inside the job folder, and so must every file it references through src, srcset, stylesheet href, url() or @import in inline or linked CSS, or an embedded HTML/SVG document (followed in turn); data: URIs are fine. References must be relative paths. Absolute paths, file: URLs, paths outside the job and remote URLs are refused: copy the file into the job first, and use installed fonts by family name (doctor lists them). The page renders offline, and any request a script makes outside the snapshot is refused and fails the render. Before rendering, the HTML and everything it references are copied to renders/v{N}/ keeping their paths relative to the job folder, and the render reads that snapshot, so the version can be reproduced without the originals. --size is the CSS viewport; the PNG is size x scale pixels. Rendering waits for document.fonts.ready and every image to decode (30 s limit) in a fresh browser, so an edited file always renders anew.
 
-Fonts are checked against what Chrome actually used: for each element with text, if the first family in its computed font-family is not among the fonts that drew it, or some of its glyphs fell back to another font, the render fails with the element, the intended family and the font actually used.
+Fonts are checked against what Chrome actually used: for each element with text of its own (body included), if the first family in its computed font-family did not draw all of that text, or some glyphs fell back to another font, the render fails with the element, the intended family and the fonts actually used. Text that exists only in ::before/::after content is not checked.
 
 failures: exit 1 with a list (missing_assets, refused_assets, font_problems, console_errors) when an asset is missing, refused or failed to load, a font did not load or fell back, or the page logged an error; refused and missing assets stop before a version is created, problems during rendering record a failed attempt.""")
     p.add_argument("job", type=job_type, help="short name under data/ or a path")
@@ -343,6 +343,9 @@ def main(argv: list[str] | None = None) -> int:
         ap.error(exc.message)
     except Failure as exc:
         emit(exc.payload())
+        return 1
+    except OSError as exc:
+        emit({"error": f"{type(exc).__name__}: {exc}"})
         return 1
     emit(doc)
     return code

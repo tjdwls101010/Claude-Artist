@@ -352,3 +352,24 @@ def test_copying_a_job_folder_keeps_relative_refs_working(sandbox):
     moved = sandbox.data / "moved"
     shutil.copytree(job, moved)
     assert read(moved)["versions"][0]["refs"] == ["ref.png"] and (moved / "ref.png").exists()
+
+
+def test_a_reused_pid_does_not_keep_an_attempt_running(sandbox):
+    job = init(sandbox)
+    add(sandbox, job)
+    stranger = subprocess.Popen(["sleep", "30"])  # alive, but started long after the attempt
+    try:
+        with ledger.edit(job) as doc:
+            doc["versions"][0]["attempts"].append({"id": "v1-1", "status": "running", "started": "2026-01-01T00:00:00+09:00", "pid": stranger.pid})
+        assert sandbox.run("show", job).out["failures_by_kind"] == {"interrupted": 1}
+    finally:
+        stranger.kill()
+
+
+def test_missing_image_file_is_a_json_error(sandbox):
+    job = init(sandbox)
+    add(sandbox, job)
+    name = ok_attempt(job, 1)
+    (job / name).unlink()
+    r = sandbox.run("record", job, "--final", name, "--export", sandbox.root / "out.png")
+    assert r.code == 1 and r.out and "error" in r.out

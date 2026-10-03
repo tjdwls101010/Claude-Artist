@@ -63,21 +63,22 @@ def login_status() -> tuple[bool, str]:
 
 
 def _stop(proc: subprocess.Popen) -> None:
-    """codex exec spawns children that outlive a signal to the parent alone, so the whole group is stopped."""
-    try:
-        pgid = os.getpgid(proc.pid)
-    except ProcessLookupError:
-        return
-    for sig, wait in ((signal.SIGTERM, 5), (signal.SIGKILL, 5)):
+    """codex exec spawns children that can outlive the parent, so the whole group gets SIGTERM, a grace period, then SIGKILL whether or not the parent already exited. The group id is the parent's pid (it started its own session)."""
+    for sig in (signal.SIGTERM, signal.SIGKILL):
         try:
-            os.killpg(pgid, sig)
-        except ProcessLookupError:
-            return
+            os.killpg(proc.pid, sig)
+        except (ProcessLookupError, PermissionError):
+            break
         try:
-            proc.wait(timeout=wait)
-            return
+            proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
-            continue
+            pass
+        if sig == signal.SIGTERM:
+            time.sleep(0.5)  # give children that do honour SIGTERM a moment before the kill
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        pass
 
 
 def _resolve_image(reported: str | None, thread_id: str | None) -> tuple[Path | None, bool]:

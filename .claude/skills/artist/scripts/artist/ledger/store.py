@@ -6,7 +6,9 @@ import datetime
 import fcntl
 import json
 import os
+import subprocess
 import threading
+import time
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -59,7 +61,8 @@ def _write(job_dir: Path, job: dict) -> None:
     os.replace(tmp, job_dir / LEDGER)
 
 
-def _alive(pid: int) -> bool:
+def _alive(pid: int, started: str) -> bool:
+    """Whether the process that opened an attempt still runs. A live pid that started after the attempt is a reused pid, not the writer."""
     if pid == os.getpid():
         return True
     try:
@@ -67,8 +70,20 @@ def _alive(pid: int) -> bool:
     except ProcessLookupError:
         return False
     except PermissionError:
+        pass
+    try:
+        out = subprocess.run(["ps", "-o", "etime=", "-p", str(pid)], capture_output=True, text=True, timeout=5).stdout.strip()
+        attempt_start = datetime.datetime.fromisoformat(started).timestamp()
+    except (OSError, subprocess.TimeoutExpired, ValueError):
         return True
-    return True
+    if not out:
+        return False
+    days, _, clock = out.rpartition("-")
+    parts = [int(x) for x in clock.split(":")]
+    while len(parts) < 3:
+        parts.insert(0, 0)
+    elapsed = (int(days) if days else 0) * 86400 + parts[0] * 3600 + parts[1] * 60 + parts[2]
+    return time.time() - elapsed <= attempt_start + 5
 
 
 def _close_dead(job: dict) -> bool:
@@ -76,7 +91,7 @@ def _close_dead(job: dict) -> bool:
     changed = False
     for version in job.get("versions", []):
         for attempt in version.get("attempts", []):
-            if attempt.get("status") == "running" and not _alive(attempt.get("pid", 0)):
+            if attempt.get("status") == "running" and not _alive(attempt.get("pid", 0), attempt.get("started", "")):
                 attempt["status"] = "interrupted"
                 changed = True
     return changed
