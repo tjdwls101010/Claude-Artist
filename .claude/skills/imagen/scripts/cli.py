@@ -120,13 +120,13 @@ def build_parser() -> Parser:
     ap = Parser(prog="cli.py", description=__doc__, epilog=TOP_EPILOG, formatter_class=formatter)
     sub = ap.add_subparsers(dest="command", metavar="<command>", parser_class=Parser)
 
-    def command(name: str, summary: str, epilog: str) -> Parser:
-        return sub.add_parser(name, help=summary, description=summary, epilog=epilog, formatter_class=formatter)
+    def command(name: str, summary: str, epilog: str, details: str | None = None) -> Parser:
+        return sub.add_parser(name, help=summary, description=f"{summary}\n\n{details}" if details else summary, epilog=epilog, formatter_class=formatter)
 
     p = command("init", "Create a job: its folder, job.json and contact sheet.", """\
 output: {"job": <folder>, "sheet": <contact-sheet.html>, "inherited": {"aspect"?, "targets", "notes"}, "legacy_notes"?: [...]}
 
---like copies from another job only what outlives one job: the aspect, the targets (stored as absolute paths) and notes recorded as reusable. Notes in an older ledger (schema 1 or 2) carry no scope, so none is inherited; they come back as legacy_notes for you to read, and the ones that still hold go back in with `record --note ... --reusable`. An explicit --aspect beats the inherited one; explicit --note and --target are added after the inherited ones.
+--like copies from another job only what outlives one job: the aspect, the targets (stored as absolute paths) and notes recorded as reusable. Notes in an older ledger (schema 1 or 2) carry no scope, so none is inherited; they come back as legacy_notes for you to read, and the ones that still hold go back in with `record --note ... --reusable`. An explicit --aspect beats the inherited one; explicit --note and --target are added after the inherited ones. Old notes often prescribe giving sizes by position instead of fractions, cropping by the ground instead of the subject, and that hex colours do not work; measured on the current model, none of the three held, so do not carry them into a new job as constraints.
 
 failures: exit 1 if job.json already exists (never overwritten) or --like names a folder without a readable job.json; exit 2 if no aspect is given and --like supplies none.""")
     p.add_argument("job", type=job_type, help="short name under data/ or a path")
@@ -139,15 +139,26 @@ failures: exit 1 if job.json already exists (never overwritten) or --like names 
     p.add_argument("--like", type=job_type, metavar="JOB", help="inherit aspect, targets and reusable notes from that job")
 
     p = command("add", "Record a version's intent before generating it. The prompt is read from stdin.", """\
-output: {"version": N}
+output: {"version": N, "warnings"?: [...]}
+warnings flags an aspect ratio that is missing from, or different in, the prompt's first sentence (not checked for --aspect none); the version is recorded either way.
 
 The prompt lives only in job.json; generate reads it from there. --method edit regenerates the whole image with the --ref images attached; it is not inpainting and keeps no pixels.
 
-failures: exit 2 if stdin is empty or a terminal, --method edit has no --ref, or an argument is malformed; exit 1 if the job does not exist, a --ref file is missing, or --parent names no version.""")
+failures: exit 2 if stdin is empty or a terminal, --method edit has no --ref, or an argument is malformed; exit 1 if the job does not exist, a --ref file is missing, or --parent names no version.""", details="""\
+How the model behind codex's image_gen (gpt-image-2) reads a prompt: tendencies observed on this path, not laws; when a result disagrees, trust the result.
+  - Write the prompt as English prose.
+  - State the aspect ratio as its own sentence at the start ("Portrait 4:5 aspect ratio, taller than it is wide."); the ratio is set only by the prompt, and pixel sizes add nothing. add warns when the first sentence does not state this version's aspect.
+  - Whatever is named first takes more of the frame and the first look, so name the subject first.
+  - Listing several media keeps only some of them; to mix, name one medium and give it another's quality ("an oil painting with the flatness of a screenprint").
+  - Anything not supplied gets invented (organisation names, domains, dates, places, numbers, slogans), differently in every image: give every string the image must show, Korean included, inside double quotes exactly as it must read, and close with "no other text"; for a source, quotation or figure, give the wording or only reserve its place.
+  - Asked for unreadable marks, it writes readable-looking fake Hangul; a surface that must carry no text has to be called blank.
+  - Short Hangul strings come out mostly right; lettering whose strokes turn into objects breaks the letters.
+  - A flat ground given as a hex colour comes out close to it; colour names and comparisons drift further.
+  - A shape with one right answer (a flag's trigrams, a symbol) comes out right when its structure is described, not its name and count.""")
     p.add_argument("job", type=job_type, help="short name under data/ or a path")
     p.add_argument("--direction", required=True, metavar="NAME", help="short memorable name of the direction this version belongs to")
-    p.add_argument("--method", required=True, choices=["generate", "edit"], help="generate: from the prompt alone (refs optional, as style or content references); edit: rework the --ref image(s), at least one required")
-    p.add_argument("--ref", action="append", default=[], metavar="IMG", help="image passed to the model with the prompt; repeatable")
+    p.add_argument("--method", required=True, choices=["generate", "edit"], help="generate: from the prompt alone (refs optional, as style or content references); edit: rework the --ref image(s), at least one required; the prompt names the one change and lists everything that must stay, since \"keep everything else the same\" alone does not hold it")
+    p.add_argument("--ref", action="append", default=[], metavar="IMG", help="image passed to the model with the prompt; repeatable. The model carries over a reference's palette, lettering and layout, down to its date format, even when told to use it for style only. When a new composition was wanted and the reference's layout came along, drop the reference and put the wanted qualities into words; with --method edit keeping the composition is the point.")
     p.add_argument("--aspect", type=aspect_or_none, help="W:H the result is checked against (default: the brief's aspect); none for a cut-out element whose shape does not matter")
     p.add_argument("--transparent", action="store_true", help="ask image_gen for a transparent background; generate reports whether the PNG really has alpha")
     p.add_argument("--parent", type=int, metavar="N", help="the version this one revises")
