@@ -13,7 +13,7 @@ import pytest
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS = ROOT / ".claude" / "skills" / "artist" / "scripts"
+SCRIPTS = ROOT / ".claude" / "skills" / "imagen" / "scripts"
 CLI = SCRIPTS / "cli.py"
 FAKES = Path(__file__).resolve().parent / "fakes"
 
@@ -63,7 +63,7 @@ def sandbox(tmp_path) -> Sandbox:
         fake = bin_dir / name
         fake.write_text(f"#!/bin/sh\necho \"$1\" >> '{tmp_path / 'opened.log'}'\n")
         fake.chmod(0o755)
-    env = {**os.environ, "ARTIST_DATA": str(data), "CODEX_HOME": str(home), "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}", "PYTHONPATH": str(SCRIPTS), "PYTHONUNBUFFERED": "1"}
+    env = {**os.environ, "IMAGEN_DATA": str(data), "CODEX_HOME": str(home), "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}", "PYTHONPATH": str(SCRIPTS), "PYTHONUNBUFFERED": "1"}
     env.pop("FAKE_CODEX_SCENARIO", None)
     return Sandbox(tmp_path, data, home, bin_dir, env)
 

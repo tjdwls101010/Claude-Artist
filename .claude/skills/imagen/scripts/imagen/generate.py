@@ -13,8 +13,8 @@ import sys
 import uuid
 from pathlib import Path
 
-from artist import codex, ledger, paths, sheet
-from artist.errors import Failure
+from imagen import codex, ledger, paths, sheet
+from imagen.errors import Failure
 
 # Six calls have run together without failures; more is unmeasured.
 CONCURRENCY = 6

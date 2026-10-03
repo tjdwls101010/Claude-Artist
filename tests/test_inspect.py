@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from artist import inspect
+from imagen import inspect
 from conftest import make_png
 
 
@@ -168,7 +168,7 @@ def test_measure_argument_rules(sandbox):
 
 
 def test_measure_into_the_ledger(sandbox):
-    from artist import ledger
+    from imagen import ledger
 
     sandbox.run("init", "job", "--request", "x", "--aspect", "1:1")
     job = sandbox.data / "job"

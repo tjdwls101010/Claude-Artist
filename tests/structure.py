@@ -1,4 +1,4 @@
-"""The structure rules of the artist skill's code, as a checker that returns every violation it finds.
+"""The structure rules of the imagen skill's code, as a checker that returns every violation it finds.
 
 Kept apart from the test so the test can run it on the real tree and on deliberately broken copies.
 """
@@ -9,7 +9,7 @@ import ast
 import sys
 from pathlib import Path
 
-PACKAGE = "artist"
+PACKAGE = "imagen"
 
 SKILL_TOP = {"SKILL.md", "references", "data", "scripts"}
 SCRIPTS_TOP = {"cli.py", PACKAGE}
@@ -129,7 +129,7 @@ def check_tree(skill_dir: Path, tests_dir: Path | None = None) -> list[str]:
     if PACKAGE in sys.stdlib_module_names:
         problems.append(f"package name {PACKAGE!r} shadows a standard-library module")
     if not pkg.is_dir():
-        return problems + ["scripts/artist/ is missing"]
+        return problems + ["scripts/imagen/ is missing"]
 
     units = _units_on_disk(pkg)
     for name in units:

@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from artist.errors import Failure
+from imagen.errors import Failure
 
 
 def inherit(source_dir: Path) -> dict:

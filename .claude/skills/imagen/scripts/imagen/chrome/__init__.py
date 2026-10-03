@@ -1,6 +1,6 @@
 """The installed Google Chrome as a renderer, driven by Playwright (channel "chrome"; nothing is downloaded).
 
-`render` loads one local HTML file in a fresh browser at a CSS viewport and device scale, waits for fonts and images, and writes a PNG. It lets only file:// and data: requests through, and only file:// requests under `root`; everything it saw go wrong comes back as lists in the skill's terms. `ARTIST_CHROME_PATH` points it at another Chrome binary.
+`render` loads one local HTML file in a fresh browser at a CSS viewport and device scale, waits for fonts and images, and writes a PNG. It lets only file:// and data: requests through, and only file:// requests under `root`; everything it saw go wrong comes back as lists in the skill's terms. `IMAGEN_CHROME_PATH` points it at another Chrome binary.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ LOAD_TIMEOUT_MS = 30_000
 def _browser():
     from playwright.sync_api import sync_playwright
 
-    override = os.environ.get("ARTIST_CHROME_PATH")
+    override = os.environ.get("IMAGEN_CHROME_PATH")
     with sync_playwright() as p:
         browser = p.chromium.launch(executable_path=override) if override else p.chromium.launch(channel="chrome")
         try:

@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from artist import ledger
+from imagen import ledger
 from conftest import make_png
 
 playwright = pytest.importorskip("playwright.sync_api")

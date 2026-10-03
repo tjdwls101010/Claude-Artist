@@ -15,13 +15,13 @@ MARK_TEXT_ELEMENTS = """
   const out = [];
   let n = 0;
   for (const el of document.body ? [document.body, ...document.body.querySelectorAll('*')] : []) {
-    if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'ARTIST-PROBE', 'ARTIST-PROBE-BOX'].includes(el.tagName)) continue;
+    if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'IMAGEN-PROBE', 'IMAGEN-PROBE-BOX'].includes(el.tagName)) continue;
     const text = [...el.childNodes].filter(c => c.nodeType === 3).map(c => c.textContent).join('').trim();
     if (!text) continue;
     const cs = getComputedStyle(el);
     if (cs.visibility === 'hidden' || cs.display === 'none' || el.getClientRects().length === 0) continue;
     const id = 'e' + (n++);
-    el.setAttribute('data-artist-text', id);
+    el.setAttribute('data-imagen-text', id);
     const label = el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\\s+/).join('.') : '');
     out.push({id, label, text: text.slice(0, 40), family: cs.fontFamily, weight: cs.fontWeight, style: cs.fontStyle, stretch: cs.fontStretch});
   }
@@ -33,12 +33,12 @@ MARK_TEXT_ELEMENTS = """
 ADD_PROBES = """
 ([items, sentinels]) => {
   const set = (el, props) => { el.style.setProperty('all', 'initial', 'important'); for (const [k, v] of Object.entries(props)) el.style.setProperty(k, v, 'important'); };
-  const box = document.createElement('artist-probe-box');
+  const box = document.createElement('imagen-probe-box');
   set(box, {position: 'absolute', left: '-10000px', top: '0', display: 'block', visibility: 'visible', 'white-space': 'pre'});
   for (const it of items) {
     sentinels.forEach((s, i) => {
-      const span = document.createElement('artist-probe');
-      span.setAttribute('data-artist-probe', it.id + '-' + i);
+      const span = document.createElement('imagen-probe');
+      span.setAttribute('data-imagen-probe', it.id + '-' + i);
       set(span, {display: 'inline', visibility: 'visible', 'white-space': 'pre', 'font-family': it.first + ', "' + s + '"', 'font-weight': it.weight, 'font-style': it.style, 'font-stretch': it.stretch});
       span.textContent = it.text_full;
       box.appendChild(span);
@@ -79,7 +79,7 @@ def _fonts(cdp, root: int, selector: str) -> list[dict]:
 def font_problems(page) -> list[dict]:
     """Elements whose text was not drawn entirely with the first family of their font-family."""
     items = page.evaluate(MARK_TEXT_ELEMENTS)
-    full = page.evaluate("() => Object.fromEntries([...document.querySelectorAll('[data-artist-text]')].map(el => [el.getAttribute('data-artist-text'), [...el.childNodes].filter(c => c.nodeType === 3).map(c => c.textContent).join('')]))")
+    full = page.evaluate("() => Object.fromEntries([...document.querySelectorAll('[data-imagen-text]')].map(el => [el.getAttribute('data-imagen-text'), [...el.childNodes].filter(c => c.nodeType === 3).map(c => c.textContent).join('')]))")
     probed = []
     for it in items:
         it["first"] = first_family(it["family"])
@@ -96,15 +96,15 @@ def font_problems(page) -> list[dict]:
     probed_ids = {p["id"] for p in probed}
     problems = []
     for it in items:
-        used = _fonts(cdp, root, f'[data-artist-text="{it["id"]}"]')
+        used = _fonts(cdp, root, f'[data-imagen-text="{it["id"]}"]')
         faces = [f["postScriptName"] for f in used]
         names = sorted({f["familyName"] for f in used})
         reason = None
         if len(faces) > 1:
             reason = "some glyphs were drawn with another font"
         elif it["id"] in probed_ids:
-            a = [f["postScriptName"] for f in _fonts(cdp, root, f'[data-artist-probe="{it["id"]}-0"]')]
-            b = [f["postScriptName"] for f in _fonts(cdp, root, f'[data-artist-probe="{it["id"]}-1"]')]
+            a = [f["postScriptName"] for f in _fonts(cdp, root, f'[data-imagen-probe="{it["id"]}-0"]')]
+            b = [f["postScriptName"] for f in _fonts(cdp, root, f'[data-imagen-probe="{it["id"]}-1"]')]
             if a != b:
                 reason = "the family is not installed or cannot draw this text"
             elif faces != a:
@@ -127,8 +127,8 @@ def family_available(page, names: list[str], sample: str) -> dict[str, bool]:
     root = cdp.send("DOM.getDocument", {"depth": -1})["root"]["nodeId"]
     out = {}
     for it, name in zip(items, names):
-        a = _fonts(cdp, root, f'[data-artist-probe="{it["id"]}-0"]')
-        b = _fonts(cdp, root, f'[data-artist-probe="{it["id"]}-1"]')
+        a = _fonts(cdp, root, f'[data-imagen-probe="{it["id"]}-0"]')
+        b = _fonts(cdp, root, f'[data-imagen-probe="{it["id"]}-1"]')
         out[name] = bool(a) and [f["postScriptName"] for f in a] == [f["postScriptName"] for f in b] and len(a) == 1
     cdp.detach()
     return out
