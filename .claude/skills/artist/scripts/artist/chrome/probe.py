@@ -29,23 +29,22 @@ MARK_TEXT_ELEMENTS = """
 }
 """
 
-# Probes use a tag no page stylesheet targets and reset every inherited property, so page CSS cannot hide or restyle them.
+# Probes hang off <html>, use tags no page stylesheet names, and set every property inline with !important, which outranks any author stylesheet rule, so page CSS cannot hide or restyle them.
 ADD_PROBES = """
 ([items, sentinels]) => {
+  const set = (el, props) => { el.style.setProperty('all', 'initial', 'important'); for (const [k, v] of Object.entries(props)) el.style.setProperty(k, v, 'important'); };
   const box = document.createElement('artist-probe-box');
-  box.style.cssText = 'all: initial; position: absolute; left: -10000px; top: 0; display: block; white-space: pre;';
+  set(box, {position: 'absolute', left: '-10000px', top: '0', display: 'block', visibility: 'visible', 'white-space': 'pre'});
   for (const it of items) {
     sentinels.forEach((s, i) => {
       const span = document.createElement('artist-probe');
       span.setAttribute('data-artist-probe', it.id + '-' + i);
-      span.style.cssText = 'all: initial; display: inline; white-space: pre;';
-      span.style.fontFamily = it.first + ', "' + s + '"';
-      span.style.fontWeight = it.weight; span.style.fontStyle = it.style; span.style.fontStretch = it.stretch;
+      set(span, {display: 'inline', visibility: 'visible', 'white-space': 'pre', 'font-family': it.first + ', "' + s + '"', 'font-weight': it.weight, 'font-style': it.style, 'font-stretch': it.stretch});
       span.textContent = it.text_full;
       box.appendChild(span);
     });
   }
-  (document.body || document.documentElement).appendChild(box);
+  document.documentElement.appendChild(box);
 }
 """
 

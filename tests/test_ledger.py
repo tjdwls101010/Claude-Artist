@@ -373,3 +373,13 @@ def test_missing_image_file_is_a_json_error(sandbox):
     (job / name).unlink()
     r = sandbox.run("record", job, "--final", name, "--export", sandbox.root / "out.png")
     assert r.code == 1 and r.out and "error" in r.out
+
+
+def test_own_pid_on_an_old_attempt_is_not_this_process(sandbox):
+    job = init(sandbox)
+    add(sandbox, job)
+    with ledger.edit(job) as doc:
+        doc["versions"][0]["attempts"].append({"id": "v1-1", "status": "running", "started": "2000-01-01T00:00:00+09:00", "pid": os.getpid()})
+    assert ledger.read(job)["versions"][0]["attempts"][0]["status"] == "interrupted"
+    row = ledger.start_attempt(job, 1)
+    assert ledger.read(job)["versions"][0]["attempts"][1]["status"] == "running" and row["id"] == "v1-2"

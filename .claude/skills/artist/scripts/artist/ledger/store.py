@@ -16,6 +16,8 @@ from artist.errors import Failure
 
 from .schema import SCHEMA, validate
 
+PROCESS_STARTED = time.time()
+
 LEDGER = "job.json"
 LOCK = "job.json.lock"
 
@@ -63,21 +65,27 @@ def _write(job_dir: Path, job: dict) -> None:
 
 def _alive(pid: int, started: str) -> bool:
     """Whether the process that opened an attempt still runs. A live pid that started after the attempt is a reused pid, not the writer."""
+    try:
+        attempt_start = datetime.datetime.fromisoformat(started).timestamp()
+    except ValueError:
+        attempt_start = None
     if pid == os.getpid():
-        return True
+        return attempt_start is None or attempt_start >= PROCESS_STARTED - 5
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
         return False
     except PermissionError:
         pass
-    try:
-        out = subprocess.run(["ps", "-o", "etime=", "-p", str(pid)], capture_output=True, text=True, timeout=5).stdout.strip()
-        attempt_start = datetime.datetime.fromisoformat(started).timestamp()
-    except (OSError, subprocess.TimeoutExpired, ValueError):
+    if attempt_start is None:
         return True
-    if not out:
-        return False
+    try:
+        ps = subprocess.run(["ps", "-o", "etime=", "-p", str(pid)], capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.TimeoutExpired):
+        return True
+    out = ps.stdout.strip()
+    if ps.returncode != 0 or not out:
+        return True  # the pid answered kill(0); without its age we cannot call it someone else's
     days, _, clock = out.rpartition("-")
     parts = [int(x) for x in clock.split(":")]
     while len(parts) < 3:

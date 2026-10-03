@@ -18,7 +18,6 @@ from artist.errors import Failure
 
 DIFF_SIDE = 128
 CSS_URL = re.compile(r"""url\(\s*(['"]?)(.*?)\1\s*\)""", re.I)
-SRCSET = re.compile(r"\s*(\S+)(?:\s+[^,\s]+)?\s*(?:,|$)")
 DOCUMENTS = {".html", ".htm", ".svg"}
 CSS_IMPORT = re.compile(r"""@import\s+(?:url\(\s*)?(['"])(.*?)\1""", re.I)
 
@@ -110,8 +109,7 @@ class _Refs(HTMLParser):
             if key in a:
                 self.urls.append(a[key])
         if "srcset" in a:
-            # A candidate is a URL without spaces, an optional descriptor, then a comma; data: URLs contain commas of their own.
-            self.urls += [m.group(1).rstrip(",") for m in SRCSET.finditer(a["srcset"])]
+            self.urls += _srcset_urls(a["srcset"])
         if tag == "link" and "href" in a and a.get("rel", "").lower() in ("stylesheet", "preload", "icon", "prefetch"):
             self.urls.append(a["href"])
         if tag in ("image", "use", "feimage"):
@@ -128,6 +126,28 @@ class _Refs(HTMLParser):
     def handle_data(self, data):
         if self._in_style:
             self.css.append(data)
+
+
+def _srcset_urls(value: str) -> list[str]:
+    """URLs of a srcset, tokenised the way the HTML spec does: a URL runs to whitespace (so data: URLs keep their commas), trailing commas end a candidate with no descriptor, otherwise descriptors run to the next comma outside parentheses."""
+    urls, i, n = [], 0, len(value)
+    while i < n:
+        while i < n and (value[i].isspace() or value[i] == ","):
+            i += 1
+        start = i
+        while i < n and not value[i].isspace():
+            i += 1
+        url = value[start:i]
+        if url.endswith(","):
+            urls.append(url.rstrip(","))
+            continue
+        if url:
+            urls.append(url)
+        depth = 0
+        while i < n and not (value[i] == "," and depth == 0):
+            depth += {"(": 1, ")": -1}.get(value[i], 0)
+            i += 1
+    return urls
 
 
 def _css_urls(css: str) -> list[str]:

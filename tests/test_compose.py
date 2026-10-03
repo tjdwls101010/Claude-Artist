@@ -238,8 +238,9 @@ def test_body_text_is_font_checked(rjob):
     assert r.code == 1 and r.out["font_problems"][0]["intended"] == "NoSuchFamily"
 
 
-def test_page_css_does_not_break_the_font_check(rjob):
-    (rjob.job / "c.html").write_text('<!doctype html><meta charset="utf-8"><style>span, div { display:none !important; }</style><p style="font-family:Helvetica">Hello</p>')
+@pytest.mark.parametrize("css", ["span, div { display:none !important; }", "body > *, html > * { display:none !important; visibility:hidden !important; } body > main, html > body { display:block !important; visibility:visible !important; }", "* { font-family: Courier !important; } p { font-family: Helvetica !important; }"])
+def test_page_css_does_not_break_the_font_check(rjob, css):
+    (rjob.job / "c.html").write_text(f'<!doctype html><meta charset="utf-8"><style>{css}</style><main><p style="font-family:Helvetica">Hello</p></main>')
     r = rjob.run("render", rjob.job, "--html", rjob.job / "c.html", "--size", "300x200", "--direction", "t")
     assert r.code == 0, r.raw
 
@@ -253,6 +254,9 @@ def test_data_uri_srcset_is_allowed(rjob):
     (rjob.job / "d.html").write_text(f'<!doctype html><meta charset="utf-8"><img srcset="{uri} 1x, assets/photo.png 2x">')
     r = rjob.run("render", rjob.job, "--html", rjob.job / "d.html", "--size", "300x200", "--direction", "t")
     assert r.code == 0, r.raw
+    (rjob.job / "e.html").write_text('<!doctype html><meta charset="utf-8"><img srcset="assets/photo.png, assets/nope.png">')
+    r = rjob.run("render", rjob.job, "--html", rjob.job / "e.html", "--size", "300x200", "--direction", "t")
+    assert r.code == 1 and any("nope.png" in m for m in r.out["missing_assets"])
 
 
 def test_a_chrome_that_will_not_start_closes_the_attempt(rjob):
